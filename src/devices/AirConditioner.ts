@@ -29,6 +29,7 @@ export default class AirConditioner extends baseDevice {
   protected serviceHumiditySensor;
   protected serviceLight;
   protected serviceFanV2;
+  protected serviceTimerButton;
 
   // more feature
   protected serviceJetMode; // jet mode
@@ -128,6 +129,25 @@ export default class AirConditioner extends baseDevice {
     }
 
     this.setupButton(device);
+
+    this.serviceTimerButton = accessory.getService('Timer') || accessory.addService(Switch, 'Timer', 'Timer');
+    this.serviceTimerButton.updateCharacteristic(platform.Characteristic.Name, 'Timer');
+    this.serviceTimerButton.addOptionalCharacteristic(platform.Characteristic.ConfiguredName);
+    this.serviceTimerButton.updateCharacteristic(platform.Characteristic.ConfiguredName, 'Timer');
+    this.serviceTimerButton.getCharacteristic(platform.Characteristic.On)
+      .onGet(() => {
+        return device.snapshot['airState.reservation.sleepTime'] !== 0;
+      })
+      .onSet((value: CharacteristicValue) => {
+        const timerValue = value ? 180 : 0;
+        this.platform.ThinQ?.deviceControl(device.id, {
+          dataKey: 'airState.reservation.sleepTime',
+          dataValue: timerValue, // timer value
+        }).then(() => {
+          device.data.snapshot['airState.reservation.sleepTime'] = timerValue;
+          this.updateAccessoryCharacteristic(device);
+        });
+      });
   }
 
   public get config() {
@@ -635,6 +655,7 @@ export default class AirConditioner extends baseDevice {
       Service: {
         Switch,
       },
+      Characteristic,
     } = this.platform;
 
     const serviceButton = this.accessory.getService(name) || this.accessory.addService(Switch, name, name);
@@ -659,6 +680,11 @@ export default class AirConditioner extends baseDevice {
           });
         }
       });
+
+    serviceButton.addOptionalCharacteristic(Characteristic.ConfiguredName);
+    if (!serviceButton.getCharacteristic(Characteristic.ConfiguredName).value) {
+      serviceButton.updateCharacteristic(Characteristic.ConfiguredName, name);
+    }
 
     this.serviceLabelButtons.addLinkedService(serviceButton);
   }
