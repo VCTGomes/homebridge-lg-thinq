@@ -139,7 +139,7 @@ export default class AirConditioner extends baseDevice {
         return device.snapshot['airState.reservation.sleepTime'] !== 0;
       })
       .onSet((value: CharacteristicValue) => {
-        const timerValue = value ? 180 : 0;
+        const timerValue = value ? 120 : 0;
         this.platform.ThinQ?.deviceControl(device.id, {
           dataKey: 'airState.reservation.sleepTime',
           dataValue: timerValue, // timer value
